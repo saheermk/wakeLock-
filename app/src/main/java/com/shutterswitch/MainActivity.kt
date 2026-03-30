@@ -3,18 +3,26 @@ package com.shutterswitch
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,6 +61,16 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Request SYSTEM_ALERT_WINDOW permission
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Please allow 'Display over other apps' to keep the screen on", Toast.LENGTH_LONG).show()
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+        }
+
         setContent {
             ShutterSwitchTheme {
                 ShutterSwitchScreen(
@@ -64,6 +82,15 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun startWakeLockService() {
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, "Permission required: Display over other apps", Toast.LENGTH_LONG).show()
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:$packageName")
+            )
+            startActivity(intent)
+            return
+        }
         val intent = Intent(this, WakeLockService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
@@ -89,7 +116,7 @@ fun ShutterSwitchScreen(
     onSwitchOn: () -> Unit,
     onSwitchOff: () -> Unit
 ) {
-    var isOn by remember { mutableStateOf(false) }
+    val isOn by WakeLockService.isServiceRunning.collectAsState()
 
     // Animate background gradient
     val bgColorTop by animateColorAsState(
@@ -132,7 +159,7 @@ fun ShutterSwitchScreen(
         ) {
             // App title
             Text(
-                text = "SHUTTER\nSWITCH",
+                text = "NO\nSLEEP",
                 fontSize = 36.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 8.sp,
@@ -145,7 +172,7 @@ fun ShutterSwitchScreen(
 
             // Status subtitle
             val statusText by remember(isOn) {
-                derivedStateOf { if (isOn) "WAKE LOCK ACTIVE" else "DEVICE MAY SLEEP" }
+                derivedStateOf { if (isOn) "NO SLEEP ACTIVE" else "DEVICE CAN SLEEP" }
             }
             val statusColor by animateColorAsState(
                 targetValue = if (isOn) Color(0xFF00CFFF) else Color(0xFF667788),
@@ -165,7 +192,6 @@ fun ShutterSwitchScreen(
             LargeShutterToggle(
                 isOn = isOn,
                 onToggle = { newState ->
-                    isOn = newState
                     if (newState) onSwitchOn() else onSwitchOff()
                 }
             )
@@ -174,6 +200,11 @@ fun ShutterSwitchScreen(
 
             // Info card
             InfoCard(isOn = isOn)
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Developer Info
+            DeveloperInfo()
         }
     }
 }
@@ -221,10 +252,11 @@ fun LargeShutterToggle(
                 contentAlignment = Alignment.Center
             ) {
                 // Power icon indicator
-                Text(
-                    text = if (isOn) "⏻" else "⏼",
-                    fontSize = 28.sp,
-                    color = if (isOn) Color(0xFF001A22) else Color(0xFF223344)
+                Icon(
+                    imageVector = if (isOn) Icons.Default.Check else Icons.Default.Close,
+                    contentDescription = "Toggle Icon",
+                    modifier = Modifier.size(32.dp),
+                    tint = if (isOn) Color(0xFF001A22) else Color(0xFF223344)
                 )
             }
         }
@@ -262,10 +294,6 @@ fun InfoCard(isOn: Boolean) {
         targetValue = if (isOn) Color(0x2200CFFF) else Color(0x111E2A38),
         animationSpec = tween(500), label = "cardBg"
     )
-    val borderColor by animateColorAsState(
-        targetValue = if (isOn) Color(0x6600CFFF) else Color(0x221E2A38),
-        animationSpec = tween(500), label = "border"
-    )
 
     Surface(
         modifier = Modifier
@@ -280,14 +308,72 @@ fun InfoCard(isOn: Boolean) {
         ) {
             Text(
                 text = if (isOn)
-                    "🔒  Wake lock acquired\nThe CPU will not sleep while this is active."
+                    "☀️ Screen is forced ON\nYour device will not sleep while this is active."
                 else
-                    "💤  No wake lock held\nThe device may sleep normally.",
+                    "💡 Quick Tip:\nPull down your Quick Settings (notification panel), tap the edit icon, and add the 'No Sleep' tile for easy access!",
                 fontSize = 14.sp,
-                color = if (isOn) Color(0xFFAAEEFF) else Color(0xFF667788),
+                color = if (isOn) Color(0xFFAAEEFF) else Color(0xFF88AABB),
                 textAlign = TextAlign.Center,
                 lineHeight = 22.sp
             )
+        }
+    }
+}
+
+@Composable
+fun DeveloperInfo() {
+    val uriHandler = LocalUriHandler.current
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.Transparent
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "Developed by saheermk",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF00CFFF)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Creative Developer blending design\nand engineering to create immersive apps.",
+                fontSize = 12.sp,
+                color = Color(0xFF667788),
+                textAlign = TextAlign.Center,
+                lineHeight = 16.sp
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Socials Row
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "🌐 Website",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFAAEEFF),
+                    modifier = Modifier.clickable { uriHandler.openUri("https://saheermk.pages.dev") }
+                )
+                Text(
+                    text = "💼 LinkedIn",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFAAEEFF),
+                    modifier = Modifier.clickable { uriHandler.openUri("https://in.linkedin.com/in/saheermk") }
+                )
+                Text(
+                    text = "💻 GitHub",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFFAAEEFF),
+                    modifier = Modifier.clickable { uriHandler.openUri("https://github.com/saheermk/") }
+                )
+            }
         }
     }
 }

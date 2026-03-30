@@ -66,3 +66,24 @@ _Creative Developer blending design and engineering to create immersive apps._
 - 🌐 **[Website & Portfolio](https://saheermk.pages.dev)**
 - 💼 **[LinkedIn](https://in.linkedin.com/in/saheermk)**
 - 💻 **[GitHub](https://github.com/saheermk/)**
+
+<br />
+
+---
+
+## 🚀 How to Release a New Version
+
+To build and publish a new version of No Sleep to the GitHub Releases page:
+
+1. **Tag the version** (e.g., `v1.1.0`):
+
+   ```bash
+   git tag v1.1.0
+   ```
+
+2. **Push the tag to GitHub**:
+   ```bash
+   git push origin v1.1.0
+   ```
+
+The **GitHub CI/CD** workflow will automatically build the APKs and create a new Release for you!

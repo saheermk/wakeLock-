@@ -60,7 +60,7 @@ cd no-sleep
 
 ## 👨‍💻 Developer
 
-**Developed by Saheer**  
+**Developed by Saheermk**  
 _Creative Developer blending design and engineering to create immersive apps._
 
 - 🌐 **[Website & Portfolio](https://saheermk.pages.dev)**

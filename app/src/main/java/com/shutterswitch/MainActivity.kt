@@ -170,9 +170,9 @@ fun ShutterSwitchScreen(
 
     val currentVersion = remember {
         try {
-            packageManager.getPackageInfo(packageName, 0).versionName ?: "1.0"
+            packageManager.getPackageInfo(packageName, 0).versionName ?: "3.1.0"
         } catch (e: Exception) {
-            "1.0"
+            "3.1.0"
         }
     }
     var showUpdateDialog by remember { mutableStateOf(false) }

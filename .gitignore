@@ -72,3 +72,4 @@ java_pid*.hprof
 *.jks
 release.keystore
 keystore_base64.txt
+.agents/

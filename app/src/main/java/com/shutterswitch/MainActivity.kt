@@ -20,29 +20,23 @@ import kotlin.concurrent.thread
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.Spring
-import androidx.compose.material.icons.Icons
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.ui.platform.LocalUriHandler
-import androidx.compose.ui.res.painterResource
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.graphics.*
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -219,18 +213,12 @@ fun ShutterSwitchScreen(
 
     // Animate background gradient
     val bgColorTop by animateColorAsState(
-        targetValue = if (isOn) Color(0xFF0A1628) else Color(0xFF1A1A2E),
-        animationSpec = tween(600), label = "bgTop"
+        targetValue = if (isOn) Color(0xFF070B18) else Color(0xFF0A0B0E),
+        animationSpec = tween(800), label = "bgTop"
     )
     val bgColorBottom by animateColorAsState(
-        targetValue = if (isOn) Color(0xFF001F4D) else Color(0xFF16213E),
-        animationSpec = tween(600), label = "bgBottom"
-    )
-
-    // Glow scale animation
-    val glowScale by animateFloatAsState(
-        targetValue = if (isOn) 1.4f else 0.6f,
-        animationSpec = spring(stiffness = Spring.StiffnessLow), label = "glow"
+        targetValue = if (isOn) Color(0xFF0E162D) else Color(0xFF111216),
+        animationSpec = tween(800), label = "bgBottom"
     )
 
     if (showUpdateDialog) {
@@ -260,149 +248,432 @@ fun ShutterSwitchScreen(
             .background(Brush.verticalGradient(listOf(bgColorTop, bgColorBottom))),
         contentAlignment = Alignment.Center
     ) {
-        // Ambient glow blob behind the switch
+        // Layered Ambient Glow Blob
+        val glowSize by animateDpAsState(
+            targetValue = if (isOn) 340.dp else 240.dp,
+            animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessVeryLow),
+            label = "glowSize"
+        )
+        val glowAlpha by animateFloatAsState(
+            targetValue = if (isOn) 0.28f else 0.08f,
+            animationSpec = tween(800),
+            label = "glowAlpha"
+        )
         Box(
             modifier = Modifier
-                .size(320.dp)
-                .scale(glowScale)
-                .blur(80.dp)
+                .size(glowSize)
+                .alpha(glowAlpha)
                 .background(
-                    color = if (isOn) Color(0x6600CFFF) else Color(0x22334455),
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0x3D7A5AF8),
+                            Color(0x1FDF71FF),
+                            Color.Transparent
+                        )
+                    ),
                     shape = CircleShape
                 )
         )
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(32.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 24.dp, vertical = 40.dp)
         ) {
-            // App title
-            Text(
-                text = "NO\nSLEEP",
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 8.sp,
-                lineHeight = 42.sp,
-                color = Color(0xFFE0F4FF),
-                textAlign = TextAlign.Center
-            )
+            Spacer(modifier = Modifier.height(20.dp))
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Status subtitle
-            val statusText by remember(isOn) {
-                derivedStateOf { if (isOn) "NO SLEEP ACTIVE" else "DEVICE CAN SLEEP" }
+            // App Title Group
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "NO SLEEP",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 6.sp,
+                    color = Color(0xFFEAF2FF),
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "KEEP YOUR SCREEN AWAKE",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 3.sp,
+                    color = Color(0xFF6B7E96),
+                    textAlign = TextAlign.Center
+                )
             }
-            val statusColor by animateColorAsState(
-                targetValue = if (isOn) Color(0xFF00CFFF) else Color(0xFF667788),
-                animationSpec = tween(400), label = "statusColor"
-            )
-            Text(
-                text = statusText,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 3.sp,
-                color = statusColor
-            )
 
-            Spacer(modifier = Modifier.height(72.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            // The large Shutter Switch toggle
-            LargeShutterToggle(
+            // The glowing Power Core control dial
+            PowerCoreControl(
                 isOn = isOn,
                 onToggle = { newState ->
                     if (newState) onSwitchOn() else onSwitchOff()
                 }
             )
 
-            Spacer(modifier = Modifier.height(56.dp))
+            Spacer(modifier = Modifier.height(36.dp))
 
-            // Info card
+            // Redesigned modern Info Card
             InfoCard(isOn = isOn)
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Developer Info
+            // Redesigned modern Developer Profile
             DeveloperInfo()
+
+            Spacer(modifier = Modifier.height(20.dp))
         }
     }
 }
 
 @Composable
-fun LargeShutterToggle(
+fun PowerCoreControl(
     isOn: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
-    val trackColor by animateColorAsState(
-        targetValue = if (isOn) Color(0xFF005F7A) else Color(0xFF1E2A38),
-        animationSpec = tween(400), label = "track"
-    )
-    val thumbColor by animateColorAsState(
-        targetValue = if (isOn) Color(0xFF00CFFF) else Color(0xFF445566),
-        animationSpec = tween(400), label = "thumb"
-    )
-    val thumbOffsetDp by animateDpAsState(
-        targetValue = if (isOn) 68.dp else 0.dp,
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    // Tactile Click Hold-Down state to make rapid touches feel satisfyingly mechanical
+    val clickTrigger = remember { mutableStateOf(0) }
+    var isAnimatingClick by remember { mutableStateOf(false) }
+    LaunchedEffect(clickTrigger.value) {
+        if (clickTrigger.value > 0) {
+            isAnimatingClick = true
+            kotlinx.coroutines.delay(120) // Holds the button down for a realistic duration
+            isAnimatingClick = false
+        }
+    }
+
+    val isVisualPressed = isPressed || isAnimatingClick
+
+    // Snappy physical scaling on press (scale down to 0.93)
+    val buttonScale by animateFloatAsState(
+        targetValue = if (isVisualPressed) 0.93f else 1.0f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessMedium
         ),
-        label = "thumbOffset"
+        label = "buttonScale"
     )
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Track
+    // Translation along both X & Y axes to simulate pushing diagonally down-right into the screen
+    val buttonTranslationY by animateDpAsState(
+        targetValue = if (isVisualPressed) 6.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "buttonTranslationY"
+    )
+    val buttonTranslationX by animateDpAsState(
+        targetValue = if (isVisualPressed) 1.5.dp else 0.dp,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMedium
+        ),
+        label = "buttonTranslationX"
+    )
+
+    // Outer Shadows/Highlights opacity (completely disappear on click/press)
+    val shadowAlpha by animateFloatAsState(
+        targetValue = if (isVisualPressed) 0f else 0.45f,
+        animationSpec = tween(150),
+        label = "shadowAlpha"
+    )
+
+    // Inner bottom lip bevel thickness (representing depth/inset shadow which flattens on click)
+    val insetBevelHeight by animateDpAsState(
+        targetValue = if (isVisualPressed) 0.dp else 4.dp,
+        animationSpec = tween(150),
+        label = "insetBevelHeight"
+    )
+
+    // Button colors (Purple/Pink when active, Slate/Obsidian when inactive)
+    val btnBgColorStart by animateColorAsState(
+        targetValue = if (isOn) Color(0xFF7A5AF8) else Color(0xFF1E2230),
+        animationSpec = tween(300), label = "btnBgColorStart"
+    )
+    val btnBgColorEnd by animateColorAsState(
+        targetValue = if (isOn) Color(0xFF7A5AF8) else Color(0xFF151821),
+        animationSpec = tween(300), label = "btnBgColorEnd"
+    )
+    val btnBorderColor by animateColorAsState(
+        targetValue = if (isOn) Color(0xFF9E7EFE) else Color(0xFF3A3F50),
+        animationSpec = tween(300), label = "btnBorderColor"
+    )
+
+    // Infinite rotation for the active glowing arc/ring on the socket boundary
+    val infiniteTransition = rememberInfiniteTransition(label = "rotationTransition")
+    val rotationAngle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 4000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rotationAngle"
+    )
+
+    // Particles raw progress loop for floating points
+    val rawProgress by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "rawProgress"
+    )
+
+    // Pulse animation for the central icon when active
+    val iconPulse by if (isOn) {
+        val pulseTransition = rememberInfiniteTransition(label = "pulseTransition")
+        pulseTransition.animateFloat(
+            initialValue = 0.94f,
+            targetValue = 1.06f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(1200, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "iconPulse"
+        )
+    } else {
+        remember { mutableStateOf(1.0f) }
+    }
+
+    // Glowing rim gradient colors (Purple to Pink/Magenta)
+    val glowColorStart by animateColorAsState(
+        targetValue = if (isOn) Color(0xFF7A5AF8) else Color(0x224C5B75),
+        animationSpec = tween(600), label = "glowColorStart"
+    )
+    val glowColorEnd by animateColorAsState(
+        targetValue = if (isOn) Color(0xFFDF71FF) else Color(0x224C5B75),
+        animationSpec = tween(600), label = "glowColorEnd"
+    )
+
+    // Active status light color
+    val statusLightColor by animateColorAsState(
+        targetValue = if (isOn) Color(0xFFDF71FF) else Color(0x224C5B75),
+        animationSpec = tween(400), label = "statusLightColor"
+    )
+
+    Box(
+        modifier = Modifier
+            .size(240.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        // 1. Ambient Background Aura (Purple and Pink)
         Box(
             modifier = Modifier
-                .width(160.dp)
-                .height(88.dp)
-                .clip(RoundedCornerShape(44.dp))
-                .background(trackColor)
-                .padding(8.dp),
-            contentAlignment = Alignment.CenterStart
+                .size(220.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = if (isOn) {
+                            listOf(Color(0x337A5AF8), Color(0x0CDF71FF), Color.Transparent)
+                        } else {
+                            listOf(Color(0x04FFFFFF), Color.Transparent)
+                        }
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        // 2. Sweeping Rotating Bezel Outline (Circular track around the button)
+        Box(
+            modifier = Modifier
+                .size(192.dp)
+                .rotate(if (isOn) rotationAngle else 0f)
+                .padding(2.dp)
+                .border(
+                    width = 2.dp,
+                    brush = Brush.sweepGradient(
+                        colors = listOf(glowColorStart, glowColorEnd, glowColorStart)
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        // 3. Dynamic Outer 3D Drop Shadows (disappear completely when clicked/pressed)
+        // Bottom-Right Dark Shadow
+        Box(
+            modifier = Modifier
+                .offset(x = 3.dp, y = 10.dp)
+                .size(156.dp)
+                .alpha(shadowAlpha)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x59000000), Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
+        )
+        // Top-Left Light Accent Shadow
+        Box(
+            modifier = Modifier
+                .offset(x = (-3).dp, y = (-8).dp)
+                .size(156.dp)
+                .alpha(shadowAlpha)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0x1FFFFFFF), Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
+        )
+
+        // 4. Round Physical 3D Tactile Button Plate (CircleShape)
+        Box(
+            modifier = Modifier
+                .offset(x = buttonTranslationX, y = buttonTranslationY)
+                .scale(buttonScale)
+                .size(160.dp)
+                .clip(CircleShape)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(btnBgColorStart, btnBgColorEnd)
+                    )
+                )
+                .border(2.dp, btnBorderColor, CircleShape)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null
+                ) {
+                    clickTrigger.value++
+                    onToggle(!isOn)
+                }
         ) {
-            // Thumb
-            Box(
-                modifier = Modifier
-                    .offset(x = thumbOffsetDp)
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(thumbColor),
-                contentAlignment = Alignment.Center
-            ) {
-                // Power icon indicator
-                Icon(
-                    painter = painterResource(id = if (isOn) R.drawable.ic_sun else R.drawable.ic_moon),
-                    contentDescription = "Toggle Icon",
-                    modifier = Modifier.size(32.dp),
-                    tint = if (isOn) Color(0xFF001A22) else Color(0xFF223344)
+            // Draw radial glow overlay at the bottom when active (matches CSS button::after radial component)
+            if (isOn) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+                            drawRect(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(Color(0xB3DF71FF), Color.Transparent),
+                                    radius = size.width * 0.7f,
+                                    center = Offset(x = size.width / 2f, y = size.height)
+                                )
+                            )
+                        }
                 )
             }
-        }
 
-        Spacer(modifier = Modifier.height(24.dp))
+            // 5. Floating Points Animation (Particles field inside the button)
+            if (isOn) {
+                Canvas(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                ) {
+                    val width = size.width
+                    val height = size.height
 
-        // ON / OFF tap button
-        Button(
-            onClick = { onToggle(!isOn) },
-            modifier = Modifier
-                .width(160.dp)
-                .height(52.dp),
-            shape = RoundedCornerShape(26.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (isOn) Color(0xFF00CFFF) else Color(0xFF2A3A4A),
-                contentColor = if (isOn) Color(0xFF001A22) else Color(0xFF99BBCC)
-            ),
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = if (isOn) 8.dp else 2.dp
+                    // 10 custom particles mapped from the CSS definition
+                    val particles = listOf(
+                        // xPercent, delayOffset, durationFactor
+                        kotlin.Triple(0.15f, 0.2f, 1.0f),
+                        kotlin.Triple(0.32f, 0.5f, 0.9f),
+                        kotlin.Triple(0.24f, 0.1f, 1.1f),
+                        kotlin.Triple(0.42f, 0.0f, 0.85f),
+                        kotlin.Triple(0.50f, 0.3f, 1.05f),
+                        kotlin.Triple(0.72f, 0.6f, 1.15f),
+                        kotlin.Triple(0.85f, 0.2f, 0.95f),
+                        kotlin.Triple(0.58f, 0.8f, 1.0f),
+                        kotlin.Triple(0.92f, 0.1f, 0.8f),
+                        kotlin.Triple(0.64f, 0.4f, 0.9f)
+                    )
+
+                    particles.forEach { pData ->
+                        val xPercent = pData.first
+                        val delayOffset = pData.second
+                        val durationFactor = pData.third
+                        
+                        // Map progress for this particle
+                        val p = (rawProgress / durationFactor + delayOffset) % 1.0f
+                        
+                        // Calculate coordinate positions
+                        val px = width * xPercent
+                        val py = height - (p * (height + 20.dp.toPx())) // float upwards
+                        
+                        // Calculate opacity fade out towards 85% - 100%
+                        val alpha = if (p < 0.85f) {
+                            1.0f - (p / 0.85f) * 0.4f // gradual fade
+                        } else {
+                            (1.0f - p) / 0.15f // quick fade to zero
+                        }
+                        
+                        // Render point
+                        drawCircle(
+                            color = Color.White.copy(alpha = alpha.coerceIn(0f, 1f)),
+                            radius = 2.dp.toPx(),
+                            center = Offset(px, py)
+                        )
+                    }
+                }
+            }
+
+            // 6. Box (Rounded Square) inside the round button (centered, glassmorphic)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        if (isOn) {
+                            Brush.linearGradient(
+                                listOf(Color(0x22FFFFFF), Color(0x06FFFFFF))
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                listOf(Color(0x0DFFFFFF), Color(0x05FFFFFF))
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isOn) Color(0x4DFFFFFF) else Color(0x1AFFFFFF),
+                        shape = RoundedCornerShape(18.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                // Central Icon (Sun/Moon)
+                Icon(
+                    painter = painterResource(id = if (isOn) R.drawable.ic_sun else R.drawable.ic_moon),
+                    contentDescription = "Power Icon",
+                    modifier = Modifier
+                        .size(38.dp)
+                        .scale(iconPulse),
+                    tint = if (isOn) Color(0xFFFFB300) else Color(0xFF5B6E85)
+                )
+            }
+
+            // LED Indicator at Top-Center (simulates dynamic switch status)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 16.dp)
+                    .size(6.dp)
+                    .clip(CircleShape)
+                    .background(statusLightColor)
             )
-        ) {
-            Text(
-                text = if (isOn) "TURN OFF" else "TURN ON",
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                letterSpacing = 2.sp
+
+            // Inset Bevel Line at the bottom (simulates the inset lip)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(insetBevelHeight)
+                    .background(Color.White.copy(alpha = 0.08f))
             )
         }
     }
@@ -411,38 +682,57 @@ fun LargeShutterToggle(
 @Composable
 fun InfoCard(isOn: Boolean) {
     val cardBg by animateColorAsState(
-        targetValue = if (isOn) Color(0x2200CFFF) else Color(0x111E2A38),
+        targetValue = if (isOn) Color(0x0FFFFFFF) else Color(0x0AFFFFFF),
         animationSpec = tween(500), label = "cardBg"
     )
 
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp)),
-        color = cardBg,
-        tonalElevation = 0.dp
+            .clip(RoundedCornerShape(24.dp))
+            .background(cardBg)
+            .border(1.dp, Color(0x12FFFFFF), RoundedCornerShape(24.dp))
+            .padding(20.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                painter = painterResource(id = if (isOn) R.drawable.ic_sun else R.drawable.ic_lightbulb),
-                contentDescription = null,
-                modifier = Modifier.size(28.dp),
-                tint = if (isOn) Color(0xFFAAEEFF) else Color(0xFF88AABB)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (isOn)
-                    "Screen is forced ON\nYour device will not sleep while this is active."
-                else
-                    "Quick Tip:\nPull down your Quick Settings (notification panel), tap the edit icon, and add the 'No Sleep' tile for easy access!",
-                fontSize = 14.sp,
-                color = if (isOn) Color(0xFFAAEEFF) else Color(0xFF88AABB),
-                textAlign = TextAlign.Center,
-                lineHeight = 22.sp
-            )
+            // Icon container with dynamic light status
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isOn) Color(0x1FFF9E00) else Color(0x0AFFFFFF)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = if (isOn) R.drawable.ic_sun else R.drawable.ic_lightbulb),
+                    contentDescription = "Tips Icon",
+                    modifier = Modifier.size(20.dp),
+                    tint = if (isOn) Color(0xFFFF9E00) else Color(0xFF8FA3B6)
+                )
+            }
+
+            // Tip/Status Text
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isOn) "Active Mode Engaged" else "Quick Settings Setup",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isOn) Color(0xFFFFC400) else Color(0xFFEAF2FF)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = if (isOn)
+                        "Screen is forced ON. Your device will not sleep while this is active."
+                    else
+                        "Swipe down twice from the top of your screen, tap the Edit (pencil) icon, then find and drag the 'No Sleep' tile into your active Quick Settings panel for instant access.",
+                    fontSize = 12.sp,
+                    color = Color(0xFF8FA3B6),
+                    lineHeight = 18.sp
+                )
+            }
         }
     }
 }
@@ -451,94 +741,139 @@ fun InfoCard(isOn: Boolean) {
 fun DeveloperInfo() {
     val uriHandler = LocalUriHandler.current
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color.Transparent
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color(0x07FFFFFF))
+            .border(1.dp, Color(0x0CFFFFFF), RoundedCornerShape(24.dp))
+            .padding(18.dp)
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
+            // Title Header
             Text(
-                text = "Developed by saheermk",
-                fontSize = 14.sp,
+                text = "ABOUT THE DEVELOPER",
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF00CFFF)
+                letterSpacing = 2.sp,
+                color = Color(0xFF5B6E85)
             )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "Creative Developer blending design\nand engineering to create immersive apps.",
-                fontSize = 12.sp,
-                color = Color(0xFF667788),
-                textAlign = TextAlign.Center,
-                lineHeight = 16.sp
-            )
-            Spacer(modifier = Modifier.height(12.dp))
+            
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Socials Row
+            // Profile info row
             Row(
-                horizontalArrangement = Arrangement.spacedBy(20.dp),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Website
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { uriHandler.openUri("https://saheermk.pages.dev") }.padding(4.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_website),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color(0xFFAAEEFF)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Website",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFAAEEFF)
-                    )
-                }
+                // Developer Logo Image
+                Image(
+                    painter = painterResource(id = R.drawable.saheermk),
+                    contentDescription = "saheermk Logo",
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .border(1.dp, Color(0x3300E5FF), CircleShape),
+                    contentScale = ContentScale.Crop
+                )
 
-                // LinkedIn
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { uriHandler.openUri("https://in.linkedin.com/in/saheermk") }.padding(4.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_linkedin),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color(0xFFAAEEFF)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "LinkedIn",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFAAEEFF)
-                    )
-                }
+                Spacer(modifier = Modifier.width(14.dp))
 
-                // GitHub
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.clickable { uriHandler.openUri("https://github.com/saheermk/") }.padding(4.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_github),
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp),
-                        tint = Color(0xFFAAEEFF)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
+                Column {
                     Text(
-                        text = "GitHub",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFAAEEFF)
+                        text = "saheermk",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFEAF2FF)
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Fullstack Developer & Designer",
+                        fontSize = 12.sp,
+                        color = Color(0xFF8FA3B6)
                     )
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Social Tags
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                SocialPill(
+                    iconId = R.drawable.ic_website,
+                    label = "Website",
+                    onClick = { uriHandler.openUri("https://saheermk.pages.dev") },
+                    modifier = Modifier.weight(1f)
+                )
+                SocialPill(
+                    iconId = R.drawable.ic_linkedin,
+                    label = "LinkedIn",
+                    onClick = { uriHandler.openUri("https://in.linkedin.com/in/saheermk") },
+                    modifier = Modifier.weight(1f)
+                )
+                SocialPill(
+                    iconId = R.drawable.ic_github,
+                    label = "GitHub",
+                    onClick = { uriHandler.openUri("https://github.com/saheermk/") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SocialPill(
+    iconId: Int,
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    
+    val bgAlpha by animateFloatAsState(
+        targetValue = if (isPressed) 0.16f else 0.06f,
+        animationSpec = tween(200), label = "pillBgAlpha"
+    )
+
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = bgAlpha))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(12.dp))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconId),
+                contentDescription = label,
+                modifier = Modifier.size(15.dp),
+                tint = Color(0xFFEAF2FF)
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFFEAF2FF)
+            )
         }
     }
 }
@@ -551,9 +886,9 @@ fun DeveloperInfo() {
 fun ShutterSwitchTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
-            primary = Color(0xFF00CFFF),
-            background = Color(0xFF0A1628),
-            surface = Color(0xFF16213E)
+            primary = Color(0xFF00E5FF),
+            background = Color(0xFF0A0B0E),
+            surface = Color(0xFF141720)
         ),
         content = content
     )
